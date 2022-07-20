@@ -7,6 +7,7 @@ from email.policy import default
 from enum import unique
 import json
 from os import abort
+from tabnanny import check
 from tracemalloc import start
 import dateutil.parser
 import babel
@@ -22,7 +23,8 @@ import sys
 import datetime
 import os
 from models import db, Show, Venue, Artist
-
+import phonenumbers
+from wtforms import ValidationError
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -38,6 +40,7 @@ migrate = Migrate(app, db) # Define migrate to use the flask app as well as the 
 # Filters.
 #----------------------------------------------------------------------------#
 
+
 def format_datetime(value, format='medium'):
   date = dateutil.parser.parse(value)
   if format == 'full':
@@ -45,6 +48,11 @@ def format_datetime(value, format='medium'):
   elif format == 'medium':
       format="EE MM, dd, y h:mma"
   return babel.dates.format_datetime(date, format, locale='en')
+
+def check_phone(input_num):
+  check_p = phonenumbers.parse(input_num, "US")
+  if not phonenumbers.is_valid_number(check_p):
+      raise ValidationError('Invalid phone number found')
 
 app.jinja_env.filters['datetime'] = format_datetime
 
@@ -65,7 +73,7 @@ def venues():
   # replace with real venues data.
   # num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
   data = db.session.query(Show).join(Venue).join(Artist).all()
-
+  
   shows = []
   for a in data:
     shows.append({
@@ -178,7 +186,7 @@ def create_venue_form():
 def create_venue_submission():
   # insert form data as a new Venue record in the db, instead
   #  modify data to be the data object returned from db insertion
-
+  
   error = False
   try:
     name = request.form['name']
@@ -186,6 +194,7 @@ def create_venue_submission():
     state = request.form['state']
     address = request.form['address']
     phone = request.form['phone']
+    check_phone(phone)
     image_link = request.form['image_link']  
     genres =  request.form.getlist('genres')
     facebook_link = request.form['facebook_link']
@@ -200,10 +209,9 @@ def create_venue_submission():
     venue = Venue(name=name, city = city, state = state, address = address, phone = phone, genres = genres, image_link = image_link, facebook_link = facebook_link, website_link = website_link, seeking_talent = seeking_talent, seeking_description = seeking_description)
     db.session.add(venue)
     db.session.commit()
-  except:
+  except ValidationError as e:
     error = True
     db.session.rollback()
-    print(sys.exc_info())
   finally:
     db.session.close()  
   if error:
@@ -212,6 +220,7 @@ def create_venue_submission():
   else:
     flash('Venue ' + request.form['name'] + ' was successfully listed!')
     return render_template('pages/home.html')
+ 
 
 # on successful db insert, flash success
   
@@ -246,16 +255,6 @@ def delete_venue(venue_id):
 def artists():
   #replace with real data returned from querying the database
   data = Artist.query.all()
-  # data=[{
-  #   "id": 4,
-  #   "name": "Guns N Petals",
-  # }, {
-  #   "id": 5,
-  #   "name": "Matt Quevedo",
-  # }, {
-  #   "id": 6,
-  #   "name": "The Wild Sax Band",
-  # }]
   return render_template('pages/artists.html', artists=data)
 
 @app.route('/artists/search', methods=['POST'])
@@ -373,7 +372,6 @@ def edit_artist_submission(artist_id):
     db.session.commit()    
   except:
     db.session.rollback()
-    print(sys.exc_info())
   finally:
     db.session.close()  
 
@@ -437,7 +435,6 @@ def edit_venue_submission(venue_id):
     db.session.commit()    
   except:
     db.session.rollback()
-    print(sys.exc_info())
   finally:
     db.session.close()   
   # take values from the form submitted, and update existing
@@ -450,7 +447,6 @@ def edit_venue_submission(venue_id):
 @app.route('/artists/create', methods=['GET'])
 def create_artist_form():
   form = ArtistForm()
-  form.validate()
   return render_template('forms/new_artist.html', form=form)
 
 @app.route('/artists/create', methods=['POST'])
@@ -466,6 +462,7 @@ def create_artist_submission():
     city = request.form['city']
     state = request.form['state']
     phone = request.form['phone']
+    check_phone(phone)
     image_link = request.form['image_link']  
     genres =  request.form.getlist('genres')
     facebook_link = request.form['facebook_link']
@@ -480,10 +477,9 @@ def create_artist_submission():
     artist = Artist(name=name, city = city, state = state, phone = phone, genres = genres, image_link = image_link, facebook_link = facebook_link, website_link = website_link, seeking_venue = seeking_venue, seeking_description = seeking_description)
     db.session.add(artist)
     db.session.commit()
-  except:
+  except ValidationError as e:
     error = True
     db.session.rollback()
-    print(sys.exc_info())
   finally:
     db.session.close()  
   if error:
@@ -588,6 +584,6 @@ if not app.debug:
 
 # Or specify port manually:
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5003))
+    port = int(os.environ.get('PORT', 5005))
     app.run(host='0.0.0.0', port=port)
 

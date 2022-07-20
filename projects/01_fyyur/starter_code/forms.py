@@ -84,13 +84,12 @@ class VenueForm(Form):
         'address', validators=[DataRequired()]
     )
     phone = StringField(
-        'phone', validators=[DataRequired(), Regexp("^[0-9*$]", message='Please enter digits')]
+        'phone', validators=[DataRequired()]
     )
     image_link = StringField(
         'image_link'
     )
     genres = SelectMultipleField(
-        #  implement enum restriction
         'genres', validators=[DataRequired()],
         choices=[
             ('Alternative', 'Alternative'),
@@ -194,7 +193,7 @@ class ArtistForm(Form):
     )
     phone = StringField(
         #  implement validation logic for phone 
-        'phone', validators=[DataRequired(), Regexp("^[0-9*$]", message='Please enter digits only')]
+        'phone', validators=[DataRequired()]
     )
     image_link = StringField(
         'image_link'
@@ -224,7 +223,6 @@ class ArtistForm(Form):
         ]
      )
     facebook_link = StringField(
-        # implement enum restriction
         'facebook_link', validators=[URL()]
      )
 
